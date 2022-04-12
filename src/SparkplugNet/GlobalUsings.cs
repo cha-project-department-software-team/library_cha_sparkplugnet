@@ -14,6 +14,8 @@ global using ProtoBuf;
 
 global using Serilog;
 
+global using SparkplugNet.Custom;
+
 global using SparkplugNet.Core.Application;
 global using SparkplugNet.Core.Enumerations;
 global using SparkplugNet.Core.Extensions;

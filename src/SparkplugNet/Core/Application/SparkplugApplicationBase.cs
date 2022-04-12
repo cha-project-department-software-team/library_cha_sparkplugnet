@@ -42,6 +42,12 @@ public class SparkplugApplicationBase<T> : SparkplugBase<T> where T : class, new
     /// </summary>
     public ConcurrentDictionary<string, MetricState<T>> DeviceStates{ get; } = new ();
 
+    #pragma warning disable CS1591
+    public Action<SparkplugNodeConnectionChangedEvent>? SparkplugNodeConnectionChangedEvent { get; set; } = null;
+    public Action<SparkplugDeviceConnectionChangedEvent>? SparkplugDeviceConnectionChangedEvent { get; set; } = null;
+    public Action<SparkplugMetricsChangedEvent>? SparkplugMetricsChangedEvent { get; set; } = null;
+    #pragma warning restore CS1591
+
     /// <summary>
     /// Gets or sets the callback for the device data received event.
     /// </summary>
@@ -597,6 +603,8 @@ public class SparkplugApplicationBase<T> : SparkplugBase<T> where T : class, new
     /// <exception cref="InvalidCastException">The metric cast is invalid.</exception>
     private void HandleDeviceMessage(string topic, VersionBData.Payload payload, SparkplugMetricStatus metricStatus, bool invokeDeviceDataCallback = false)
     {
+        var nodeId = topic.Split('/')[3];
+
         var deviceId = topic.Split('/')[4];
         var metricState = new MetricState<T>
         {
@@ -615,10 +623,53 @@ public class SparkplugApplicationBase<T> : SparkplugBase<T> where T : class, new
             if (invokeDeviceDataCallback)
             {
                 this.OnDeviceDataReceived?.Invoke(convertedMetric);
+
+                object metricValue = new Object();
+                switch (payloadMetric.ValueCase)
+                {
+                    case VersionB.Data.DataType.Boolean:
+                        metricValue = payloadMetric.BooleanValue;
+                        break;
+                    case VersionB.Data.DataType.Int32:
+                        metricValue = payloadMetric.IntValue;
+                        break;
+                    case VersionB.Data.DataType.Double:
+                        metricValue = payloadMetric.DoubleValue;
+                        break;
+                }
+
+                var sparkplugMetricsChangedEvent = new SparkplugMetricsChangedEvent
+                {
+                    EonNodeId = nodeId,
+                    DeviceId = deviceId,
+                    TagName = payloadMetric.Name,
+                    Value = metricValue
+                };
+
+                this.SparkplugMetricsChangedEvent?.Invoke(sparkplugMetricsChangedEvent);
             }
         }
 
         this.DeviceStates[deviceId] = metricState;
+
+        bool deviceConnected;
+        if (metricStatus == SparkplugMetricStatus.Online)
+        {
+            deviceConnected = true;
+        }
+        else
+        {
+            deviceConnected = false;
+        }
+
+        var sparkplugDeviceConnectionChangedEvent = new SparkplugDeviceConnectionChangedEvent
+        {
+            EonNodeId = nodeId,
+            DeviceId = deviceId,
+            Connected = deviceConnected
+        };
+
+        this.SparkplugDeviceConnectionChangedEvent?.Invoke(sparkplugDeviceConnectionChangedEvent);
     }
 
     /// <summary>
@@ -690,6 +741,24 @@ public class SparkplugApplicationBase<T> : SparkplugBase<T> where T : class, new
         }
 
         this.NodeStates[nodeId] = metricState;
+
+        bool nodeConnected;
+        if (metricStatus == SparkplugMetricStatus.Online)
+        {
+            nodeConnected = true;
+        }
+        else
+        {
+            nodeConnected = false;
+        }
+
+        var sparkplugNodeConnectionChangedEvent = new SparkplugNodeConnectionChangedEvent
+        {
+            EonNodeId = nodeId,
+            Connected = nodeConnected
+        };
+
+        this.SparkplugNodeConnectionChangedEvent?.Invoke(sparkplugNodeConnectionChangedEvent);
     }
 
     /// <summary>
