@@ -623,7 +623,10 @@ public class SparkplugApplicationBase<T> : SparkplugBase<T> where T : class, new
             if (invokeDeviceDataCallback)
             {
                 this.OnDeviceDataReceived?.Invoke(convertedMetric);
+            }
 
+            if (invokeDeviceDataCallback && payloadMetric.Name == "BDSEQ")
+            {
                 object metricValue = new Object();
                 switch (payloadMetric.ValueCase)
                 {
