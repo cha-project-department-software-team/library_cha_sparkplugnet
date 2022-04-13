@@ -611,6 +611,23 @@ public class SparkplugApplicationBase<T> : SparkplugBase<T> where T : class, new
             MetricStatus = metricStatus
         };
 
+        bool deviceConnnectChanged;
+        try
+        {
+            if(this.DeviceStates[deviceId].MetricStatus != metricStatus)
+            {
+                deviceConnnectChanged = true;
+            }
+            else
+            {
+                deviceConnnectChanged = false;
+            }
+        }
+        catch
+        {
+            deviceConnnectChanged = true;
+        }
+
         foreach (var payloadMetric in payload.Metrics)
         {
             if (payloadMetric is not T convertedMetric)
@@ -654,25 +671,28 @@ public class SparkplugApplicationBase<T> : SparkplugBase<T> where T : class, new
         }
 
         this.DeviceStates[deviceId] = metricState;
-
-        bool deviceConnected;
-        if (metricStatus == SparkplugMetricStatus.Online)
+        
+        if(deviceConnnectChanged)
         {
-            deviceConnected = true;
-        }
-        else
-        {
-            deviceConnected = false;
-        }
+            bool deviceConnected;
+            if (metricStatus == SparkplugMetricStatus.Online)
+            {
+                deviceConnected = true;
+            }
+            else
+            {
+                deviceConnected = false;
+            }
 
-        var sparkplugDeviceConnectionChangedEvent = new SparkplugDeviceConnectionChangedEvent
-        {
-            EonNodeId = nodeId,
-            DeviceId = deviceId,
-            Connected = deviceConnected
-        };
+            var sparkplugDeviceConnectionChangedEvent = new SparkplugDeviceConnectionChangedEvent
+            {
+                EonNodeId = nodeId,
+                DeviceId = deviceId,
+                Connected = deviceConnected
+            };
 
-        this.SparkplugDeviceConnectionChangedEvent?.Invoke(sparkplugDeviceConnectionChangedEvent);
+            this.SparkplugDeviceConnectionChangedEvent?.Invoke(sparkplugDeviceConnectionChangedEvent);
+        }        
     }
 
     /// <summary>
@@ -728,6 +748,23 @@ public class SparkplugApplicationBase<T> : SparkplugBase<T> where T : class, new
             MetricStatus = metricStatus
         };
 
+        bool nodeConnectChanged;
+        try
+        {
+            if(this.NodeStates[nodeId].MetricStatus != metricStatus)
+            {
+                nodeConnectChanged = true;
+            }
+            else
+            {
+                nodeConnectChanged = false;
+            }
+        }
+        catch
+        {
+            nodeConnectChanged = false;
+        }
+
         foreach (var payloadMetric in payload.Metrics)
         {
             if (payloadMetric is not T convertedMetric)
@@ -744,24 +781,27 @@ public class SparkplugApplicationBase<T> : SparkplugBase<T> where T : class, new
         }
 
         this.NodeStates[nodeId] = metricState;
-
-        bool nodeConnected;
-        if (metricStatus == SparkplugMetricStatus.Online)
+        
+        if(nodeConnectChanged)
         {
-            nodeConnected = true;
+            bool nodeConnected;
+            if (metricStatus == SparkplugMetricStatus.Online)
+            {
+                nodeConnected = true;
+            }
+            else
+            {
+                nodeConnected = false;
+            }
+
+            var sparkplugNodeConnectionChangedEvent = new SparkplugNodeConnectionChangedEvent
+            {
+                EonNodeId = nodeId,
+                Connected = nodeConnected
+            };
+
+            this.SparkplugNodeConnectionChangedEvent?.Invoke(sparkplugNodeConnectionChangedEvent);
         }
-        else
-        {
-            nodeConnected = false;
-        }
-
-        var sparkplugNodeConnectionChangedEvent = new SparkplugNodeConnectionChangedEvent
-        {
-            EonNodeId = nodeId,
-            Connected = nodeConnected
-        };
-
-        this.SparkplugNodeConnectionChangedEvent?.Invoke(sparkplugNodeConnectionChangedEvent);
     }
 
     /// <summary>
